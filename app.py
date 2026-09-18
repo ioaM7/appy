@@ -70,7 +70,7 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
 
                 # Petición a la API de Groq usando Llama 3
                 completion = client.chat.completions.create(
-                    model="llama-3.3-70B-versatile",
+                    model="openai/gpt-oss-120b",
                     messages=[
                         {"role": "system", "content": "Eres un asistente académico experto que resume textos universitarios en español claro y fluido."},
                         {"role": "user", "content": prompt}
