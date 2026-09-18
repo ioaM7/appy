@@ -70,7 +70,7 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
 
                 # Petición a la API de Groq usando Llama 3
                 completion = client.chat.completions.create(
-                    model="llama3-70b-8192",
+                    model="llama-3.1-8b-instant",
                     messages=[
                         {"role": "system", "content": "Eres un asistente académico experto que resume textos universitarios en español claro y fluido."},
                         {"role": "user", "content": prompt}
