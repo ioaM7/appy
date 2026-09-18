@@ -2,7 +2,7 @@ import streamlit as st
 from pypdf import PdfReader
 from gtts import gTTS
 import os
-import google.genai as genai
+import google.generativeai as genai
 
 # Configuración de la página para celulares
 st.set_page_config(
@@ -14,11 +14,11 @@ st.set_page_config(
 st.title("🎙️ AudioApunte Universitario")
 st.caption("Resume y escucha tus lecturas para momentos de apuro")
 
-# Entrada para el API Key o Token en la barra lateral
+# Entrada para el API Key
 with st.sidebar:
     st.header("⚙️ Configuración")
-    api_key = st.text_input("Ingresa tu Gemini API Key / Auth Token:", type="password")
-    st.info("Obtén tu clave en Google AI Studio.")
+    api_key = st.text_input("Ingresa tu Gemini API Key:", type="password")
+    st.info("Obtén tu clave gratuita en Google AI Studio.")
 
 # Selector de origen de texto
 option = st.radio("¿Qué deseas procesar?", ("Texto Copiado", "Subir PDF"))
@@ -44,15 +44,18 @@ elif option == "Subir PDF":
 # Botón de Procesamiento
 if st.button("🚀 Generar Explicación y Audio", type="primary"):
     if not api_key:
-        st.warning("Por favor ingresa tu clave/token en la barra lateral izquierda.")
+        st.warning("Por favor ingresa tu clave en la barra lateral izquierda.")
     elif not raw_text.strip():
         st.warning("Por favor ingresa texto o sube un PDF antes de continuar.")
     else:
         with st.spinner("Procesando lectura con IA y generando audio..."):
             try:
-                # Inicializar el cliente de Gemini
-                client = genai.Client(api_key=api_key)
+                # Configurar la API Key con google.generativeai
+                genai.configure(api_key=api_key)
                 
+                # Instanciar el modelo directamente
+                model = genai.GenerativeModel("gemini-1.5-flash")
+
                 prompt = f"""
                 Actúa como un profesor universitario cercano, claro y didáctico. 
                 Explica el siguiente texto académico en un RELATO CONTINUO Y EN PÁRRAFOS NARRATIVOS (estilo podcast fluido), listo para ser leído en voz alta.
@@ -66,12 +69,8 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
                 {raw_text[:12000]}
                 """
 
-                # Llamada usando el modelo estable gemini-1.5-flash
-                response = client.models.generate_content(
-                    model="gemini-1.5-flash",
-                    contents=prompt
-                )
-                
+                # Generar respuesta
+                response = model.generate_content(prompt)
                 summary = response.text
 
                 # Mostrar el texto generado
