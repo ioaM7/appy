@@ -13,7 +13,7 @@ st.set_page_config(
 st.title("🎙️ AudioApunte Universitario")
 st.caption("Resume y escucha tus lecturas para momentos de apuro")
 
-# 1. Intentar obtener la API Key desde Secrets de Streamlit o desde la barra lateral
+# 1. Obtener la API Key desde Secrets de Streamlit o barra lateral
 groq_api_key = ""
 if "GROQ_API_KEY" in st.secrets:
     groq_api_key = st.secrets["GROQ_API_KEY"]
@@ -49,9 +49,8 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
     elif not raw_text.strip():
         st.warning("Por favor ingresa texto o sube un PDF antes de continuar.")
     else:
-        with st.spinner("Procesando lectura con Llama-3 en Groq y generando audio..."):
+        with st.spinner("Procesando lectura con openai/gpt-oss-120b y generando audio..."):
             try:
-                # Inicializar el cliente de Groq
                 client = Groq(api_key=groq_api_key)
 
                 prompt = f"""
@@ -68,7 +67,7 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
                 {raw_text[:12000]}
                 """
 
-                # Petición a la API de Groq usando Llama 3
+                # Petición usando el nuevo modelo de reemplazo oficial
                 completion = client.chat.completions.create(
                     model="openai/gpt-oss-120b",
                     messages=[
