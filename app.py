@@ -1,8 +1,7 @@
 import streamlit as st
 from pypdf import PdfReader
 from gtts import gTTS
-import os
-import google.generativeai as genai
+from groq import Groq
 
 # Configuración de la página para celulares
 st.set_page_config(
@@ -14,15 +13,19 @@ st.set_page_config(
 st.title("🎙️ AudioApunte Universitario")
 st.caption("Resume y escucha tus lecturas para momentos de apuro")
 
-# Entrada para el API Key
+# 1. Intentar obtener la API Key desde Secrets de Streamlit o desde la barra lateral
+groq_api_key = ""
+if "GROQ_API_KEY" in st.secrets:
+    groq_api_key = st.secrets["GROQ_API_KEY"]
+
 with st.sidebar:
     st.header("⚙️ Configuración")
-    api_key = st.text_input("Ingresa tu Gemini API Key:", type="password")
-    st.info("Obtén tu clave gratuita en Google AI Studio.")
+    input_key = st.text_input("Ingresa tu Groq API Key (gsk_...):", value=groq_api_key, type="password")
+    if input_key:
+        groq_api_key = input_key
 
 # Selector de origen de texto
 option = st.radio("¿Qué deseas procesar?", ("Texto Copiado", "Subir PDF"))
-
 raw_text = ""
 
 if option == "Texto Copiado":
@@ -33,9 +36,7 @@ elif option == "Subir PDF":
     if uploaded_file is not None:
         try:
             reader = PdfReader(uploaded_file)
-            extracted = ""
-            for page in reader.pages:
-                extracted += page.extract_text() or ""
+            extracted = "".join([page.extract_text() or "" for page in reader.pages])
             raw_text = extracted
             st.success(f"PDF cargado con éxito ({len(reader.pages)} páginas).")
         except Exception as e:
@@ -43,18 +44,15 @@ elif option == "Subir PDF":
 
 # Botón de Procesamiento
 if st.button("🚀 Generar Explicación y Audio", type="primary"):
-    if not api_key:
-        st.warning("Por favor ingresa tu clave en la barra lateral izquierda.")
+    if not groq_api_key:
+        st.warning("Por favor ingresa tu API Key de Groq en la barra lateral o guárdala en Secrets.")
     elif not raw_text.strip():
         st.warning("Por favor ingresa texto o sube un PDF antes de continuar.")
     else:
-        with st.spinner("Procesando lectura con IA y generando audio..."):
+        with st.spinner("Procesando lectura con Llama-3 en Groq y generando audio..."):
             try:
-                # Configurar la API Key con google.generativeai
-                genai.configure(api_key=api_key)
-                
-                # Instanciar el modelo directamente
-                model = genai.GenerativeModel("gemini-1.5-flash")
+                # Inicializar el cliente de Groq
+                client = Groq(api_key=groq_api_key)
 
                 prompt = f"""
                 Actúa como un profesor universitario cercano, claro y didáctico. 
@@ -64,16 +62,26 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
                 - NO uses listas, viñetas, subtítulos ni secciones.
                 - Resume la tesis principal, los autores y los conceptos clave en 3 a 4 párrafos claros.
                 - Usa analogías sencillas pero mantén la terminología técnica adecuada.
+                - Responde OBLIGATORIAMENTE en idioma ESPAÑOL.
 
-                Texto:
+                Texto a resumir:
                 {raw_text[:12000]}
                 """
 
-                # Generar respuesta
-                response = model.generate_content(prompt)
-                summary = response.text
+                # Petición a la API de Groq usando Llama 3
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": "Eres un asistente académico experto que resume textos universitarios en español claro y fluido."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.5,
+                    max_tokens=1024
+                )
 
-                # Mostrar el texto generado
+                summary = completion.choices[0].message.content
+
+                # Mostrar la transcripción
                 st.subheader("📝 Transcripción del Resumen:")
                 st.write(summary)
 
@@ -82,7 +90,7 @@ if st.button("🚀 Generar Explicación y Audio", type="primary"):
                 audio_file = "resumen.mp3"
                 tts.save(audio_file)
 
-                # Mostrar el reproductor de audio integrado
+                # Mostrar reproductor de audio
                 st.subheader("🎧 Escuchar Resumen:")
                 st.audio(audio_file, format="audio/mp3")
 
